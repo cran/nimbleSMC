@@ -152,13 +152,11 @@ weightedMetricFunc <- function(index, samples, weights, metric, samplesToWeights
 compareFilesByLine <- function(trialResults, correctResults, main = "") {
     trialResults <- stripTestPlacementWarning(trialResults)
     correctResults <- stripTestPlacementWarning(correctResults)
-    test_that(paste0(main, ': same number of output lines'),
-          expect_equal(length(trialResults), length(correctResults)))
+    expect_equal(length(trialResults), length(correctResults))
     
     linesToTest <- min(length(trialResults), length(correctResults))
     mapply(function(lineno, trialLine, correctLine) {
-        test_that(paste0(main, ": output line #", lineno),
-                  expect_identical(trialLine, correctLine))
+        expect_identical(trialLine, correctLine)
     }, 1:linesToTest, trialResults, correctResults)
     invisible(NULL)
 }
@@ -914,10 +912,11 @@ test_filter(model = code, name = 'multivariate auxiliary', data = testdata, filt
 ## On Windows the next test can create a DLL name conflict and look
 ## up the wrong C++ class, from a previous DLL.  Hence this will be the break
 ## into two windows test units
-if(.Platform$OS.type == 'windows') {
-    message("Stopping filtering test here on Windows to avoid multiple DLL problems. Run test-filtering2 to continue")
-    stop()
-}
+## Update (2021-12-04): all tests seem to pass on Windows now, so commenting out.
+## if(.Platform$OS.type == 'windows') {
+##     message("Stopping filtering test here on Windows to avoid multiple DLL problems. Run test-filtering2 to continue")
+##     stop()
+## }
 
 test_filter(model = code, name = 'multivariate auxiliary mean lookahead', data = testdata, filterType = "auxiliary", latentNodes = "x", inits = list(a = rep(0,3), b = 1),
              filterControl = list(saveAll = TRUE, timeIndex = 1, lookahead = "mean"),
@@ -1074,8 +1073,8 @@ test_that("IF2", {
     ## Expect values similar to what obtained in version 0.9.0.
     expect_gt(cFilter$logLik[niter], -627.5, ) 
     expect_lt(exp(est[1]), 10)
-    expect_equal(exp(est[2]), 126, tolerance = 10)
-    expect_equal(est[3], -271, tolerance = 10)
+    expect_lt(abs(exp(est[2]) - 126), 10)
+    expect_lt(abs(est[3] + 271), 10)
 })
 
 
@@ -1138,10 +1137,11 @@ test_that("Test findLatentNodes", {
 sink(NULL)
 
 if (!generatingGoldFile) {
-    trialResults <- readLines(tempFileName)
-    correctResults <- readLines(system.file(file.path('test-utils', goldFileName), package = 'nimbleSMC'))
-    # correctResults <- readLines("tests/filteringTestLog_Correct.Rout")
-    compareFilesByLine(trialResults, correctResults)
+    test_that("Log file matches gold file", {
+        trialResults <- readLines(tempFileName)
+        correctResults <- readLines(system.file(file.path('test-utils', goldFileName), package = 'nimbleSMC'))
+        compareFilesByLine(trialResults, correctResults)
+    })
 }
 
 
@@ -1212,18 +1212,18 @@ test_that('initializeModel works correctly for state space models', {
     set.seed(0)
     Cinit$run()
     
-    expect_equal(Rmodel$calculate(), -77.49817, tol = 0.000001)
-    expect_equal(Cmodel$calculate(), -77.49817, tol = 0.000001)
+    expect_lt(abs(Rmodel$calculate() + 77.49817), 0.00001)
+    expect_lt(abs(Cmodel$calculate() + 77.49817), 0.00001)
     
     stateSpaceModel<-nimbleModel(code = stateSpaceCode,data = datalist,constants=constants,inits = inits, calculate = FALSE)
     bootstrapFilter<-buildBootstrapFilter(stateSpaceModel,nodes='prob',control=list(saveAll=TRUE))
     compiledList<-compileNimble(stateSpaceModel,bootstrapFilter)
     
     set.seed(0)
-    expect_equal(bootstrapFilter$run(10), -52.78133, tol = 0.000001)
+    expect_lt(abs(bootstrapFilter$run(10) + 52.78133), 0.000001)
     
     set.seed(0)
-    expect_equal(compiledList$bootstrapFilter$run(10), -52.78133, tol = 0.000001)
+    expect_lt(abs(compiledList$bootstrapFilter$run(10) + 52.78133), 0.000001)
 })
 
 

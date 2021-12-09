@@ -2,10 +2,11 @@ Package: nimbleSMC
 Title: Sequential Monte Carlo Methods for 'nimble'
 Description: Includes five particle filtering algorithms for use with state space
     models in the 'nimble' system: 'Auxiliary', 'Bootstrap', 'Ensemble Kalman filter',
-    'Iterated Filtering 2', and 'Liu-West'. A full User Manual is available at
-    <https://r-nimble.org>.
-Version: 0.10.0
-Date: 2020-11-02
+    'Iterated Filtering 2', and 'Liu-West', as described in Michaud et al. (2021),
+    <doi:10.18637/jss.v100.i03>. A full User Manual is available at
+    <https://r-nimble.org>.     
+Version: 0.10.1
+Date: 2021-12-08
 Maintainer: Christopher Paciorek <paciorek@stat.berkeley.edu>
 Authors@R: c(person("Nick", "Michaud", role = "aut"),
               person("Perry", "de Valpine", role = "aut"),
@@ -19,14 +20,12 @@ Copyright: See COPYRIGHTS file.
 Depends: R (>= 3.1.2), nimble (>= 0.10.0)
 Imports: methods
 Suggests: testthat
-Encoding: UTF-8
-LazyData: true
 URL: https://r-nimble.org, https://github.com/nimble-dev/nimbleSMC
 Collate: AuxiliaryFilter.R BootstrapFilter.R EnKFilter.R IF2Filter.R
         LiuWestFilter.R MCMCSamplers.R resamplers.R utils.R zzz.R
-RoxygenNote: 5.0.1
+RoxygenNote: 7.1.2
 NeedsCompilation: no
-Packaged: 2020-11-02 17:11:01 UTC; paciorek
+Packaged: 2021-12-09 16:23:14 UTC; paciorek
 Author: Nick Michaud [aut],
   Perry de Valpine [aut],
   Christopher Paciorek [aut, cre],
@@ -35,4 +34,4 @@ Author: Nick Michaud [aut],
   Dao Nguyen [ctb] (contributions to the IF2 code),
   The Regents of the University of California [cph]
 Repository: CRAN
-Date/Publication: 2020-11-09 09:10:02 UTC
+Date/Publication: 2021-12-09 17:20:02 UTC

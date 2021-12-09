@@ -138,23 +138,26 @@ IF2Step <- nimbleFunction(
             model$calculate(parAndPrevDeterm)
             model$simulate(calc_thisNode_self)
             logProb <- model$calculate(calc_thisNode_deps)
-            wts[i]  <- exp(logProb)
-            if(is.nan(wts[i])) wts[i] <- 0
+            wts[i]  <- logProb
+            if(is.nan(wts[i])) wts[i] <- -Inf
             logProb <- model$calculate(paramNodes)
             if(is.na(logProb) | logProb == -Inf)
-                wts[i] <- 0
+                wts[i] <- -Inf
             nimCopy(model, mvWSamples, nodes = thisNode, nodesTo = latentVar, rowTo = i)
             nimCopy(model, mvWSamples, nodes = paramNodes, rowTo = i)
-            mvWSamples['wts', i][1] <<- wts[i]
         }
-        lik <- mean(wts)
-        wts <- wts/(m*lik) ## = wts / sum(wts)
+        maxWt <- max(wts)
+        wts <- exp(wts - maxWt)
+        sumWts <- sum(exp(wts - maxWt))
+        logLik <- log(sum(wts)) + maxWt - log(m)
+        wts <- wts / sumWts
         rankSample(wts, m, ids, silent)
         for(i in 1:m){
+            mvWSamples['wts', i][1] <<- wts[i]
             copy(mvWSamples, mvEWSamples, nodes = latentVar, row = ids[i], rowTo = i)
             copy(mvWSamples, mvEWSamples, nodes = paramNodes, row = ids[i], rowTo = i)
         }
-        return(lik)
+        return(logLik)
     }
 )
 
@@ -238,11 +241,11 @@ IF2Step <- nimbleFunction(
 #' ## Cmodel <- compileNimble(model)
 #' ## Cmy_IF2 <- compileNimble(my_IF2, project = model)
 #' ## MLE estimate of a top level parameter named sigma_x:
-#' ## sigma_x_MLE <- Cmy_IF2$run(m = 10000, n = 10)
-#' ## Continue running algorithm for more precise estimate:
-#' ## sigma_x_MLE <- Cmy_IF2$continueRun(n = 10)
+#' ## sigma_x_MLE <- Cmy_IF2$run(m = 10000, n = 50, alpha = 0.2)
 #' ## visualize progression of the estimated log-likelihood
-#' ## ts.plot(CmyIF2$logLik)
+#' ## ts.plot(Cmy_IF2$logLik)
+#' ## Continue running algorithm for more precise estimate:
+#' ## sigma_x_MLE <- Cmy_IF2$continueRun(n = 50, alpha = 0.2)
 buildIteratedFilter2 <- nimbleFunction(
     setup = function(model, nodes, params = NULL, baselineNode = NULL, control = list()){
         
@@ -407,7 +410,7 @@ buildIteratedFilter2 <- nimbleFunction(
             if(baseline)
                 IF2Step0Function$run(m, j, alpha)
             for(iNode in seq_along(IF2StepFunctions)) {
-                logLik[j] <<- logLik[j] + log(IF2StepFunctions[[iNode]]$run(m, j, alpha))
+                logLik[j] <<- logLik[j] + IF2StepFunctions[[iNode]]$run(m, j, alpha)
             }
             
             ## Compute estimate and sd of particles at each iteration for diagnostics.
@@ -423,14 +426,15 @@ buildIteratedFilter2 <- nimbleFunction(
             }
             estSD[j, ] <<- sqrt(estSD[j, ] / m)
         }
-
         estimate <<- estimates[niter, ]
 
         ## Put final parameter estimates into model.
         values(model, params) <<- estimate  
         model$calculate(parDeterm)
         oldM <<- m
-        oldJ <<- j 
+        oldJ <<- j
+        if(oldJ != niter)
+            oldJ <<- niter  ## C++ for loop apparently increments by one at end of loop
         
         returnType(double(1))
         return(estimate)
@@ -456,7 +460,7 @@ buildIteratedFilter2 <- nimbleFunction(
                 if(baseline) 
                     IF2Step0Function$run(oldM, j, alpha)
                 for(iNode in seq_along(IF2StepFunctions)) {
-                    logLik[j] <<- logLik[j] + log(IF2StepFunctions[[iNode]]$run(oldM, j, alpha))
+                    logLik[j] <<- logLik[j] + IF2StepFunctions[[iNode]]$run(oldM, j, alpha)
                 }
                 ## Compute estimate and sd of particles at each iteration for diagnostics.
                 for(i in 1:oldM) {
