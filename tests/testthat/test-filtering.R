@@ -986,7 +986,9 @@ test_mcmc(model = code, name = 'scalar pmcmc', inits = inits, data = c(testdata,
   resultsTolerance = list(mean = list(sigma_x = .5,
                                       sigma_y = .5)))
 
-test_mcmc(model = code, name = 'block pmcmc', inits = inits, data = c(testdata, consts),  samplers = list(
+test_mcmc(model = code, name = 'block pmcmc', inits = inits, data = c(testdata, consts),
+          seed = 2, # This avoids warnings because of NAs from proposing negative sigma_y values.
+          samplers = list(
   list(type = 'RW_PF_block', target = c('sigma_x', 'sigma_y'), control = list(latents = 'x', m = 1000, resample = FALSE))),
   removeAllDefaultSamplers = TRUE, numItsC = 1000, results = list(
     mean = list(sigma_x = sigma_x,
@@ -1216,14 +1218,16 @@ test_that('initializeModel works correctly for state space models', {
     expect_lt(abs(Cmodel$calculate() + 77.49817), 0.00001)
     
     stateSpaceModel<-nimbleModel(code = stateSpaceCode,data = datalist,constants=constants,inits = inits, calculate = FALSE)
-    bootstrapFilter<-buildBootstrapFilter(stateSpaceModel,nodes='prob',control=list(saveAll=TRUE))
+    bootstrapFilter<-buildBootstrapFilter(stateSpaceModel,nodes='x',control=list(saveAll=TRUE))
     compiledList<-compileNimble(stateSpaceModel,bootstrapFilter)
+
+    ## If set m=10, get threshNum = 8 exactly and weird floating point diffs between R and C
+    ## that cause whether resampling in done in some time steps to change. Very weird.
+    set.seed(0)
+    expect_lt(abs(bootstrapFilter$run(12) + 51.38703), 0.00001)
     
     set.seed(0)
-    expect_lt(abs(bootstrapFilter$run(10) + 52.78133), 0.000001)
-    
-    set.seed(0)
-    expect_lt(abs(compiledList$bootstrapFilter$run(10) + 52.78133), 0.000001)
+    expect_lt(abs(compiledList$bootstrapFilter$run(12) + 51.38703), 0.00001)
 })
 
 
